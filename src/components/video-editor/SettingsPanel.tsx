@@ -41,6 +41,7 @@ import { cn } from "@/lib/utils";
 import { resolveImageWallpaperUrl, WALLPAPER_PATHS } from "@/lib/wallpaper";
 import { type AspectRatio, isPortraitAspectRatio } from "@/utils/aspectRatioUtils";
 import { getTestId } from "@/utils/getTestId";
+import { LicenseFooter } from "../license/LicenseFooter";
 import { AnnotationSettingsPanel } from "./AnnotationSettingsPanel";
 import { BlurSettingsPanel } from "./BlurSettingsPanel";
 import { CropControl } from "./CropControl";
@@ -1445,6 +1446,7 @@ export function SettingsPanel({
 						{t("links.starOnGithub")}
 					</button>
 				</div>
+				<LicenseFooter />
 			</div>
 		</div>
 	);

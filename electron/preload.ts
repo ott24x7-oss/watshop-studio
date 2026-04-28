@@ -69,6 +69,11 @@ contextBridge.exposeInMainWorld("electronAPI", {
 	licenseActivate: (key: string) => ipcRenderer.invoke("license:activate", key),
 	licenseOpenBuyPage: () => ipcRenderer.invoke("license:open-buy-page"),
 	licenseDeactivate: () => ipcRenderer.invoke("license:deactivate"),
+	onLicenseRefreshed: (callback: () => void) => {
+		const listener = () => callback();
+		ipcRenderer.on("license-refreshed", listener);
+		return () => ipcRenderer.removeListener("license-refreshed", listener);
+	},
 	saveExportedVideo: (videoData: ArrayBuffer, fileName: string) => {
 		return ipcRenderer.invoke("save-exported-video", videoData, fileName);
 	},

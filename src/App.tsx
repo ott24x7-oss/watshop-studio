@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { CountdownOverlay } from "./components/launch/CountdownOverlay.tsx";
 import { LaunchWindow } from "./components/launch/LaunchWindow";
 import { SourceSelector } from "./components/launch/SourceSelector";
@@ -33,6 +34,20 @@ export default function App() {
 		loadAllCustomFonts().catch((error) => {
 			console.error("Failed to load custom fonts:", error);
 		});
+	}, []);
+
+	useEffect(() => {
+		// Notify the user when the background heartbeat refreshes the JWT.
+		// This only fires on the windowType that's currently mounted; it's harmless
+		// to register on the license / source-selector / countdown windows since
+		// no event will fire there before they close.
+		const cleanup = window.electronAPI?.onLicenseRefreshed?.(() => {
+			toast.success("License renewed", {
+				description: "Your activation was checked with our servers and refreshed for another 90 days.",
+				duration: 6000,
+			});
+		});
+		return cleanup;
 	}, []);
 
 	const content = (() => {

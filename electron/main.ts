@@ -567,18 +567,28 @@ app.whenReady().then(async () => {
 
 	// Background: heartbeat if due. If the server tells us the license was
 	// revoked or the device removed, drop the local license and show the gate.
+	// If the server gave us a refreshed token, notify the renderer so it can
+	// show a small "license renewed" toast.
 	maybeHeartbeat()
 		.then((res) => {
-			if (res && res.ok === false && !("offline" in res && res.offline)) {
-				console.warn("[license] heartbeat rejected:", res.reason);
-				clearLicense().then(() => {
+			if (!res) return;
+			if (res.ok === true) {
+				if (res.refreshed) {
 					for (const w of BrowserWindow.getAllWindows()) {
-						if (!w.isDestroyed()) w.close();
+						if (!w.isDestroyed()) w.webContents.send("license-refreshed");
 					}
-					mainWindow = null;
-					showLicenseWindow();
-				});
+				}
+				return;
 			}
+			if ("offline" in res && res.offline) return;
+			console.warn("[license] heartbeat rejected:", res.reason);
+			clearLicense().then(() => {
+				for (const w of BrowserWindow.getAllWindows()) {
+					if (!w.isDestroyed()) w.close();
+				}
+				mainWindow = null;
+				showLicenseWindow();
+			});
 		})
 		.catch((err) => console.warn("[license] heartbeat error:", err));
 });
