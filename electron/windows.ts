@@ -52,7 +52,9 @@ export function createHudOverlayWindow(): BrowserWindow {
 		transparent: true,
 		resizable: false,
 		alwaysOnTop: true,
-		skipTaskbar: true,
+		// Show in taskbar so users can restore via the taskbar after minimising.
+		// (Tray icon still works too.)
+		skipTaskbar: false,
 		hasShadow: false,
 		show: !HEADLESS,
 		webPreferences: {
