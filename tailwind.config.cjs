@@ -38,14 +38,7 @@ module.exports = {
 				sm: "calc(var(--radius) - 4px)",
 			},
 			fontFamily: {
-				sans: [
-					"Inter",
-					"-apple-system",
-					"BlinkMacSystemFont",
-					"Segoe UI",
-					"Roboto",
-					"sans-serif",
-				],
+				sans: ["Inter", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "sans-serif"],
 				mono: ["JetBrains Mono", "ui-monospace", "SF Mono", "Consolas", "monospace"],
 			},
 			colors: {

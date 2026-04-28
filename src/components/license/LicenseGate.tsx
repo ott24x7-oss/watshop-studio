@@ -63,7 +63,9 @@ export function LicenseGate() {
 				</div>
 
 				<h1 style={S.title}>Activate your license</h1>
-				<p style={S.subtitle}>Enter the license key you received with your purchase. One key activates one PC for life.</p>
+				<p style={S.subtitle}>
+					Enter the license key you received with your purchase. One key activates one PC for life.
+				</p>
 
 				<form onSubmit={onSubmit}>
 					<label style={S.label}>License key</label>
@@ -106,7 +108,13 @@ export function LicenseGate() {
 					</div>
 					<div>
 						<span style={S.footLabel}>Machine ID</span>
-						<span style={{ ...S.footValue, fontFamily: "ui-monospace, JetBrains Mono, Consolas, monospace", fontSize: 10 }}>
+						<span
+							style={{
+								...S.footValue,
+								fontFamily: "ui-monospace, JetBrains Mono, Consolas, monospace",
+								fontSize: 10,
+							}}
+						>
 							{status?.machineId ? status.machineId.slice(0, 16) + "…" : "—"}
 						</span>
 					</div>
@@ -149,7 +157,14 @@ const S: Record<string, React.CSSProperties> = {
 	brandText: { fontSize: 14, fontWeight: 600, letterSpacing: 0.2, color: "#F4F1EA" },
 	title: { fontSize: 22, fontWeight: 700, letterSpacing: -0.01, marginBottom: 8 },
 	subtitle: { fontSize: 13, color: "#5A6B66", lineHeight: 1.5, marginBottom: 24 },
-	label: { fontSize: 11, color: "#5A6B66", textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 6, display: "block" },
+	label: {
+		fontSize: 11,
+		color: "#5A6B66",
+		textTransform: "uppercase",
+		letterSpacing: 0.6,
+		marginBottom: 6,
+		display: "block",
+	},
 	input: {
 		width: "100%",
 		padding: "12px 14px",
@@ -218,6 +233,12 @@ const S: Record<string, React.CSSProperties> = {
 		borderTop: "1px solid rgba(244,241,234,0.06)",
 		fontSize: 11,
 	},
-	footLabel: { color: "#5A6B66", display: "block", textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 4 },
+	footLabel: {
+		color: "#5A6B66",
+		display: "block",
+		textTransform: "uppercase",
+		letterSpacing: 0.6,
+		marginBottom: 4,
+	},
 	footValue: { color: "#F4F1EA", display: "block" },
 };

@@ -96,7 +96,9 @@ export async function loadLicense(): Promise<StoredLicense | null> {
 	return cachedLicense;
 }
 
-async function verifyToken(token: string): Promise<{ valid: boolean; payload?: Record<string, unknown>; reason?: string }> {
+async function verifyToken(
+	token: string,
+): Promise<{ valid: boolean; payload?: Record<string, unknown>; reason?: string }> {
 	try {
 		const key = await importSPKI(LICENSE_PUBLIC_KEY, "RS256");
 		const { payload } = await jwtVerify(token, key, { issuer: "watshop-studio" });
@@ -136,7 +138,9 @@ export async function getLicenseInfo() {
 /**
  * Activates a license key with the license server.
  */
-export async function activateLicense(rawKey: string): Promise<{ ok: true } | { ok: false; error: string }> {
+export async function activateLicense(
+	rawKey: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
 	const key = rawKey.trim().toUpperCase();
 	if (!key) return { ok: false, error: "Please enter a license key." };
 
@@ -178,7 +182,10 @@ export async function activateLicense(rawKey: string): Promise<{ ok: true } | { 
 	// Verify the JWT signature locally before trusting it.
 	const verified = await verifyToken(ok.token);
 	if (!verified.valid) {
-		return { ok: false, error: "Activation succeeded but the response signature is invalid. Please contact support." };
+		return {
+			ok: false,
+			error: "Activation succeeded but the response signature is invalid. Please contact support.",
+		};
 	}
 
 	const stored: StoredLicense = {
@@ -204,7 +211,15 @@ export async function activateLicense(rawKey: string): Promise<{ ok: true } | { 
  * Network errors are NOT treated as failures here — we keep the cached token
  * so the user can keep working offline.
  */
-export async function heartbeat(): Promise<{ ok: true; refreshed: boolean } | { ok: false; reason: "revoked" | "device_not_active" | "machine_mismatch" | "missing"; offline?: false } | { ok: false; reason: "offline"; offline: true }> {
+export async function heartbeat(): Promise<
+	| { ok: true; refreshed: boolean }
+	| {
+			ok: false;
+			reason: "revoked" | "device_not_active" | "machine_mismatch" | "missing";
+			offline?: false;
+	  }
+	| { ok: false; reason: "offline"; offline: true }
+> {
 	const lic = await loadLicense();
 	if (!lic) return { ok: false, reason: "missing" };
 
@@ -220,7 +235,12 @@ export async function heartbeat(): Promise<{ ok: true; refreshed: boolean } | { 
 	}
 
 	if (res.ok) {
-		const body = (await res.json()) as { valid: boolean; refreshed?: boolean; token?: string; expiresAt?: number };
+		const body = (await res.json()) as {
+			valid: boolean;
+			refreshed?: boolean;
+			token?: string;
+			expiresAt?: number;
+		};
 		const updated: StoredLicense = { ...lic, lastHeartbeat: Date.now() };
 		if (body.refreshed && body.token && body.expiresAt) {
 			updated.token = body.token;
@@ -232,7 +252,10 @@ export async function heartbeat(): Promise<{ ok: true; refreshed: boolean } | { 
 
 	if (res.status === 401 || res.status === 403) {
 		const body = (await res.json().catch(() => ({}))) as ApiError;
-		const reason = (body.error ?? "revoked") as "revoked" | "device_not_active" | "machine_mismatch";
+		const reason = (body.error ?? "revoked") as
+			| "revoked"
+			| "device_not_active"
+			| "machine_mismatch";
 		return { ok: false, reason };
 	}
 
@@ -283,7 +306,10 @@ function friendlyError(err: ApiError): string {
 		case "license_revoked":
 			return "This license has been revoked. Contact hello@watshop.in if this is a mistake.";
 		case "device_limit_reached":
-			return err.hint ?? `This license is already in use on another PC (limit: ${err.maxDevices ?? 1}). Ask support to release it.`;
+			return (
+				err.hint ??
+				`This license is already in use on another PC (limit: ${err.maxDevices ?? 1}). Ask support to release it.`
+			);
 		case "invalid_machine_id":
 			return "We couldn't identify this PC. Try restarting WatShop Studio.";
 		default:

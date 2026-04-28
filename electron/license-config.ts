@@ -6,11 +6,9 @@
  * (visible in the admin panel under /admin/integration). Then rebuild the .exe.
  */
 
-export const LICENSE_SERVER_URL =
-	process.env.LICENSE_SERVER_URL ?? "https://studiokey.watshop.in";
+export const LICENSE_SERVER_URL = process.env.LICENSE_SERVER_URL ?? "https://studiokey.watshop.in";
 
-export const LICENSE_BUY_URL =
-	process.env.LICENSE_BUY_URL ?? "https://watshop.in/studio";
+export const LICENSE_BUY_URL = process.env.LICENSE_BUY_URL ?? "https://watshop.in/studio";
 
 export const LICENSE_PUBLIC_KEY = `-----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEApZF88erwh4cRh/DuWoLx

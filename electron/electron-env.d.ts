@@ -157,9 +157,7 @@ interface Window {
 				lastHeartbeat: number;
 			};
 		}>;
-		licenseActivate: (
-			key: string,
-		) => Promise<{ ok: true } | { ok: false; error: string }>;
+		licenseActivate: (key: string) => Promise<{ ok: true } | { ok: false; error: string }>;
 		licenseOpenBuyPage: () => Promise<{ ok: boolean }>;
 		licenseDeactivate: () => Promise<{ ok: boolean }>;
 	};

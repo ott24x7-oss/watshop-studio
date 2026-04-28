@@ -293,7 +293,8 @@ function updateTrayMenu(recording: boolean = false) {
 									cancelId: 1,
 									title: "Sign out",
 									message: "Sign out of this PC?",
-									detail: "Your license will be released so you can activate it on another computer. WatShop Studio will close and re-prompt for the key on next launch.",
+									detail:
+										"Your license will be released so you can activate it on another computer. WatShop Studio will close and re-prompt for the key on next launch.",
 								});
 								if (choice !== 0) return;
 								await deactivateLicense();

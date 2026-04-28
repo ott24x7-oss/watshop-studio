@@ -1425,7 +1425,9 @@ export function SettingsPanel({
 					<button
 						type="button"
 						onClick={() => {
-							window.electronAPI?.openExternalUrl("mailto:hello@watshop.in?subject=WatShop%20Studio%20support");
+							window.electronAPI?.openExternalUrl(
+								"mailto:hello@watshop.in?subject=WatShop%20Studio%20support",
+							);
 						}}
 						className="flex-1 flex items-center justify-center gap-1.5 text-[10px] text-slate-500 hover:text-slate-300 py-1.5 transition-colors"
 					>
