@@ -1,0 +1,65 @@
+name: Build
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*.*.*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Build Windows installer
+        run: npm run build:win
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Locate artifacts
+        id: artifacts
+        shell: bash
+        run: |
+          set -eu
+          INSTALLER=$(find release -name "*Setup*.exe" | head -n1)
+          PORTABLE_DIR=$(find release -type d -name "win-unpacked" | head -n1)
+          echo "installer=$INSTALLER" >> "$GITHUB_OUTPUT"
+          echo "portable_dir=$PORTABLE_DIR" >> "$GITHUB_OUTPUT"
+      - name: Create portable zip
+        if: steps.artifacts.outputs.portable_dir != ''
+        shell: pwsh
+        run: |
+          $version = (Get-Content package.json | ConvertFrom-Json).version
+          Compress-Archive `
+            -Path "${{ steps.artifacts.outputs.portable_dir }}\*" `
+            -DestinationPath "release/WatShop-Studio-Portable-Win-x64-$version.zip" `
+            -Force
+      - name: Upload installer artifact
+        if: steps.artifacts.outputs.installer != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: ${{ steps.artifacts.outputs.installer }}
+          retention-days: 30
+      - name: Upload portable zip artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-portable
+          path: release/WatShop-Studio-Portable-Win-x64-*.zip
+          retention-days: 30
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            release/**/*Setup*.exe
+            release/WatShop-Studio-Portable-Win-x64-*.zip
+          fail_on_unmatched_files: false
+          generate_release_notes: true
