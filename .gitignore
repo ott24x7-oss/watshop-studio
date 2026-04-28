@@ -32,6 +32,9 @@ release/**
 # license-server is a separate repository
 license-server/
 
+# landing-page is a separate repository
+landing-page/
+
 # project's own deliverables folder
 watshop-deliverables/
 # npx electron-builder --mac --win
