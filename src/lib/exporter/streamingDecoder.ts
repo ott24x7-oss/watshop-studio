@@ -49,6 +49,48 @@ function buildAV1CodecString(description?: BufferSource): string {
 	return `av01.${profile}.${levelStr}${tierChar}.${bitdepthStr}`;
 }
 
+/**
+ * web-demuxer / FFmpeg sometimes emit short, ambiguous codec names that
+ * `VideoDecoder.configure()` rejects with "Unknown or ambiguous codec name".
+ * WebCodecs requires fully-parametrized codec strings (RFC 6381). For codecs
+ * where the parametrized form is mostly profile/level metadata that doesn't
+ * change how decode works for typical screen recordings, we substitute a safe
+ * default. The decoder also receives the codec-private-data via
+ * `decoderConfig.description`, which carries the real per-stream parameters.
+ *
+ * Defaults chosen for compatibility with what Chromium's MediaRecorder writes:
+ *   - VP9: Profile 0 (4:2:0 8-bit), Level 1.0
+ *   - VP8: bare "vp8" is accepted as-is by Chromium
+ *   - H.264: Baseline profile, Level 3.0 (very widely supported)
+ *   - H.265: Main profile, Level 3.1, 8-bit
+ */
+function normalizeCodecString(codec: string, description?: BufferSource): string {
+	if (!codec) return codec;
+	const lower = codec.toLowerCase().trim();
+
+	if (lower === "av01" || lower === "av1") {
+		return buildAV1CodecString(description);
+	}
+	// VP9: bare "vp9" or "vp09" without RFC 6381 params
+	if (lower === "vp9" || lower === "vp09") {
+		return "vp09.00.10.08";
+	}
+	// VP8: Chromium accepts "vp8" by itself
+	if (lower === "vp8" || lower === "vp08") {
+		return "vp8";
+	}
+	// H.264 (AVC) without parameters
+	if (lower === "h264" || lower === "avc" || lower === "avc1") {
+		return "avc1.42E01E"; // Baseline 3.0
+	}
+	// H.265 (HEVC) without parameters
+	if (lower === "h265" || lower === "hevc" || lower === "hvc1" || lower === "hev1") {
+		return "hev1.1.6.L93.B0"; // Main 3.1 8-bit
+	}
+
+	return codec;
+}
+
 export interface DecodedVideoInfo {
 	width: number;
 	height: number;
@@ -302,12 +344,17 @@ export class StreamingVideoDecoder {
 
 		const decoderConfig = await this.demuxer.getDecoderConfig("video");
 
-		// web-demuxer may return a bare "av01" for AV1 in WebM containers when the
-		// extradata isn't in the expected ISOBMFF format. WebCodecs requires the
-		// full parametrized form (e.g. "av01.0.05M.08").
-		if (/^av01$/i.test(decoderConfig.codec)) {
-			decoderConfig.codec = buildAV1CodecString(
-				decoderConfig.description as BufferSource | undefined,
+		// web-demuxer may return bare codec names ("vp9", "av01", "h264", ...)
+		// that VideoDecoder rejects with "Unknown or ambiguous codec name".
+		// Substitute fully-qualified RFC 6381 strings for common codecs.
+		const originalCodec = decoderConfig.codec;
+		decoderConfig.codec = normalizeCodecString(
+			decoderConfig.codec,
+			decoderConfig.description as BufferSource | undefined,
+		);
+		if (decoderConfig.codec !== originalCodec) {
+			console.info(
+				`[StreamingVideoDecoder] Normalised codec '${originalCodec}' → '${decoderConfig.codec}'`,
 			);
 		}
 
@@ -357,6 +404,24 @@ export class StreamingVideoDecoder {
 					hardwareAcceleration: "prefer-software" as const,
 				}
 			: decoderConfig;
+
+		// Pre-flight: if the codec string is unsupported, surface a clear error
+		// before VideoDecoder.configure() throws the cryptic "Unknown or ambiguous
+		// codec name" message that customers actually see in the export panel.
+		try {
+			const support = await VideoDecoder.isConfigSupported(decoderConfig);
+			if (!support.supported) {
+				throw new Error(
+					`This recording uses a video codec that the export pipeline can't decode (codec='${decoderConfig.codec}'). Try recording again at default settings.`,
+				);
+			}
+		} catch (probeErr) {
+			// isConfigSupported itself throws when the codec string is malformed.
+			if (probeErr instanceof Error && probeErr.message.includes("codec")) {
+				throw probeErr;
+			}
+			// Other probe errors are non-fatal — let configure() be the source of truth.
+		}
 
 		try {
 			this.decoder.configure(preferredDecoderConfig);
