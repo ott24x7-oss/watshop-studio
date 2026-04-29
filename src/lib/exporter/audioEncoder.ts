@@ -137,16 +137,29 @@ export class AudioProcessor {
 		const sampleRate = audioConfig.sampleRate || 48000;
 		const channels = audioConfig.numberOfChannels || 2;
 
-		const encodeConfig: AudioEncoderConfig = {
-			codec: "opus",
-			sampleRate,
-			numberOfChannels: channels,
-			bitrate: AUDIO_BITRATE,
-		};
+		// Pick the codec that the muxer's container can carry. WebM uses Opus,
+		// MP4 uses AAC-LC (Opus-in-MP4 has shaky player support).
+		const muxerFormat = muxer.getFormat();
+		const candidates: AudioEncoderConfig[] =
+			muxerFormat === "webm"
+				? [{ codec: "opus", sampleRate, numberOfChannels: channels, bitrate: AUDIO_BITRATE }]
+				: [
+						{ codec: "mp4a.40.2", sampleRate, numberOfChannels: channels, bitrate: AUDIO_BITRATE },
+						{ codec: "mp4a.40.5", sampleRate, numberOfChannels: channels, bitrate: AUDIO_BITRATE },
+					];
 
-		const encodeSupport = await AudioEncoder.isConfigSupported(encodeConfig);
-		if (!encodeSupport.supported) {
-			console.warn("[AudioProcessor] Opus encoding not supported, skipping audio");
+		let encodeConfig: AudioEncoderConfig | null = null;
+		for (const cfg of candidates) {
+			const support = await AudioEncoder.isConfigSupported(cfg);
+			if (support.supported) {
+				encodeConfig = cfg;
+				break;
+			}
+		}
+		if (!encodeConfig) {
+			console.warn(
+				`[AudioProcessor] No supported audio codec for ${muxerFormat}, skipping audio`,
+			);
 			for (const frame of decodedFrames) frame.close();
 			return;
 		}
@@ -398,25 +411,87 @@ export class AudioProcessor {
 		try {
 			await demuxer.load(file);
 			const audioConfig = await demuxer.getDecoderConfig("audio");
-			const reader = demuxer.read("audio").getReader();
-			let isFirstChunk = true;
 
+			// WebM muxer accepts the Opus packets directly. MP4 muxer needs AAC,
+			// so we decode the Opus and re-encode here.
+			if (muxer.getFormat() === "webm") {
+				const reader = demuxer.read("audio").getReader();
+				let isFirstChunk = true;
+				try {
+					while (!this.cancelled) {
+						const { done, value: chunk } = await reader.read();
+						if (done || !chunk) break;
+						if (isFirstChunk) {
+							await muxer.addAudioChunk(chunk, { decoderConfig: audioConfig });
+							isFirstChunk = false;
+						} else {
+							await muxer.addAudioChunk(chunk);
+						}
+					}
+				} finally {
+					try { await reader.cancel(); } catch { /* already closed */ }
+				}
+				return;
+			}
+
+			// MP4 path: Opus → AudioData → AAC.
+			const sampleRate = audioConfig.sampleRate || 48000;
+			const channels = audioConfig.numberOfChannels || 2;
+			const aacCfg: AudioEncoderConfig = {
+				codec: "mp4a.40.2",
+				sampleRate,
+				numberOfChannels: channels,
+				bitrate: AUDIO_BITRATE,
+			};
+			const aacSupport = await AudioEncoder.isConfigSupported(aacCfg);
+			if (!aacSupport.supported) {
+				console.warn("[AudioProcessor] AAC encoding not supported, dropping rendered audio");
+				return;
+			}
+
+			const decoded: AudioData[] = [];
+			const decoder = new AudioDecoder({
+				output: (data) => decoded.push(data),
+				error: (e) => console.error("[AudioProcessor] Opus→AAC decode error:", e),
+			});
+			decoder.configure(audioConfig);
+
+			const encoded: { chunk: EncodedAudioChunk; meta?: EncodedAudioChunkMetadata }[] = [];
+			const encoder = new AudioEncoder({
+				output: (chunk, meta) => encoded.push({ chunk, meta }),
+				error: (e) => console.error("[AudioProcessor] AAC encode error:", e),
+			});
+			encoder.configure(aacCfg);
+
+			const reader = demuxer.read("audio").getReader();
 			try {
 				while (!this.cancelled) {
 					const { done, value: chunk } = await reader.read();
 					if (done || !chunk) break;
-					if (isFirstChunk) {
-						await muxer.addAudioChunk(chunk, { decoderConfig: audioConfig });
-						isFirstChunk = false;
-					} else {
-						await muxer.addAudioChunk(chunk);
-					}
+					decoder.decode(chunk);
 				}
 			} finally {
-				try {
-					await reader.cancel();
-				} catch {
-					/* reader already closed */
+				try { await reader.cancel(); } catch { /* already closed */ }
+			}
+			await decoder.flush();
+			decoder.close();
+
+			for (const data of decoded) {
+				if (this.cancelled) { data.close(); continue; }
+				encoder.encode(data);
+				data.close();
+			}
+			await encoder.flush();
+			encoder.close();
+
+			let isFirstChunk = true;
+			for (const { chunk, meta } of encoded) {
+				if (this.cancelled) break;
+				if (isFirstChunk) {
+					await muxer.addAudioChunk(chunk, meta);
+					isFirstChunk = false;
+				} else {
+					await muxer.addAudioChunk(chunk);
 				}
 			}
 		} finally {

@@ -1498,6 +1498,8 @@ export default function VideoEditor() {
 						}
 					}
 
+					const targetVideoFormat: "mp4" | "webm" =
+						settings.format === "webm" ? "webm" : "mp4";
 					const exporter = new VideoExporter({
 						videoUrl: videoPath,
 						webcamVideoUrl: webcamVideoPath || undefined,
@@ -1505,7 +1507,8 @@ export default function VideoEditor() {
 						height: exportHeight,
 						frameRate: 60,
 						bitrate,
-						codec: "avc1.640033",
+						format: targetVideoFormat,
+						codec: targetVideoFormat === "webm" ? "vp09.00.51.08" : "avc1.640033",
 						wallpaper,
 						zoomRegions,
 						trimRegions,
@@ -1536,12 +1539,13 @@ export default function VideoEditor() {
 					if (result.success && result.blob) {
 						const arrayBuffer = await result.blob.arrayBuffer();
 						const timestamp = Date.now();
-						const fileName = `export-${timestamp}.mp4`;
+						const ext = targetVideoFormat;
+						const fileName = `export-${timestamp}.${ext}`;
 
 						const saveResult = await window.electronAPI.saveExportedVideo(arrayBuffer, fileName);
 
 						if (saveResult.canceled) {
-							setUnsavedExport({ arrayBuffer, fileName, format: "mp4" });
+							setUnsavedExport({ arrayBuffer, fileName, format: targetVideoFormat });
 							toast.info("Export canceled");
 						} else if (saveResult.success && saveResult.path) {
 							setUnsavedExport(null);

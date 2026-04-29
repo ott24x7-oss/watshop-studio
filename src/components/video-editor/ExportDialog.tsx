@@ -11,7 +11,7 @@ interface ExportDialogProps {
 	isExporting: boolean;
 	error: string | null;
 	onCancel?: () => void;
-	exportFormat?: "mp4" | "gif";
+	exportFormat?: "mp4" | "webm" | "gif";
 	exportedFilePath?: string;
 	onShowInFolder?: () => void;
 }
@@ -69,7 +69,7 @@ export function ExportDialog({
 	const getStatusMessage = () => {
 		if (error) return t("export.tryAgain");
 		if (isCompiling || isFinalizing) {
-			if (exportFormat === "mp4") {
+			if (exportFormat !== "gif") {
 				return t("export.finalizingVideo");
 			}
 			if (renderProgress !== undefined && renderProgress > 0) {
@@ -83,7 +83,7 @@ export function ExportDialog({
 	// Get title based on phase
 	const getTitle = () => {
 		if (error) return t("export.failed");
-		if (isFinalizing && exportFormat === "mp4") return t("export.finalizingVideoTitle");
+		if (isFinalizing && exportFormat !== "gif") return t("export.finalizingVideoTitle");
 		if (isCompiling || isFinalizing) return t("export.compilingGif");
 		return t("export.exportingFormat", { format: formatLabel });
 	};
@@ -229,7 +229,7 @@ export function ExportDialog({
 									{isCompiling || isFinalizing ? t("export.status") : t("export.format")}
 								</div>
 								<div className="text-slate-200 font-medium text-sm">
-									{isFinalizing && exportFormat === "mp4"
+									{isFinalizing && exportFormat !== "gif"
 										? t("export.finalizing")
 										: isCompiling || isFinalizing
 											? t("export.compilingStatus")

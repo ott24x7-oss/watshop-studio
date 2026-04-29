@@ -78,7 +78,7 @@ export function loadUserPreferences(): UserPreferences {
 				? (raw.exportQuality as ExportQuality)
 				: DEFAULT_PREFS.exportQuality,
 		exportFormat:
-			raw.exportFormat === "gif" || raw.exportFormat === "mp4"
+			raw.exportFormat === "gif" || raw.exportFormat === "mp4" || raw.exportFormat === "webm"
 				? (raw.exportFormat as ExportFormat)
 				: DEFAULT_PREFS.exportFormat,
 		recordingFormat:

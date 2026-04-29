@@ -4,6 +4,11 @@ export interface ExportConfig {
 	frameRate: number;
 	bitrate: number;
 	codec?: string;
+	/**
+	 * Container/codec family to mux into. Only meaningful for video exports
+	 * (gif uses its own pipeline). Defaults to "mp4".
+	 */
+	format?: "mp4" | "webm";
 }
 
 export interface ExportProgress {
@@ -29,8 +34,8 @@ export interface VideoFrameData {
 
 export type ExportQuality = "medium" | "good" | "source";
 
-// GIF Export Types
-export type ExportFormat = "mp4" | "gif";
+// Output container/codec choice for exports
+export type ExportFormat = "mp4" | "webm" | "gif";
 
 export type GifFrameRate = 15 | 20 | 25 | 30;
 

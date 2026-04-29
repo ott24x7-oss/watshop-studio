@@ -5,9 +5,20 @@ import {
 	EncodedVideoPacketSource,
 	Mp4OutputFormat,
 	Output,
+	WebMOutputFormat,
 } from "mediabunny";
 import type { ExportConfig } from "./types";
 
+/**
+ * Wraps Mediabunny's `Output` for our two export targets.
+ *
+ *   Format MP4   →  H.264 (AVC) + AAC, in an .mp4 container with fastStart.
+ *   Format WebM  →  VP9 + Opus, in a .webm container.
+ *
+ * The codec strings used by the encoder are passed in via `config.codec`
+ * (selected by the caller in videoExporter.ts); we only tell mediabunny the
+ * codec family so it can pick the right packet source.
+ */
 export class VideoMuxer {
 	private output: Output | null = null;
 	private videoSource: EncodedVideoPacketSource | null = null;
@@ -15,36 +26,42 @@ export class VideoMuxer {
 	private hasAudio: boolean;
 	private target: BufferTarget | null = null;
 	private config: ExportConfig;
+	private format: "mp4" | "webm";
 
 	constructor(config: ExportConfig, hasAudio = false) {
 		this.config = config;
 		this.hasAudio = hasAudio;
+		this.format = config.format ?? "mp4";
+	}
+
+	getFormat(): "mp4" | "webm" {
+		return this.format;
 	}
 
 	async initialize(): Promise<void> {
-		// Create the buffer target
 		this.target = new BufferTarget();
 
 		this.output = new Output({
-			format: new Mp4OutputFormat({
-				fastStart: "in-memory",
-			}),
+			format:
+				this.format === "webm"
+					? new WebMOutputFormat()
+					: new Mp4OutputFormat({ fastStart: "in-memory" }),
 			target: this.target,
 		});
 
-		// Create video source - codec will be deduced from metadata
-		this.videoSource = new EncodedVideoPacketSource("avc");
+		// Video codec family for the source. mp4 → "avc"; webm → "vp9".
+		this.videoSource = new EncodedVideoPacketSource(this.format === "webm" ? "vp9" : "avc");
 		this.output.addVideoTrack(this.videoSource, {
 			frameRate: this.config.frameRate,
 		});
 
-		// Create audio source if needed
 		if (this.hasAudio) {
-			this.audioSource = new EncodedAudioPacketSource("opus");
+			// Both containers can carry Opus, but mp4-Opus is poorly supported by
+			// players. Use AAC for mp4, Opus for webm.
+			this.audioSource = new EncodedAudioPacketSource(this.format === "webm" ? "opus" : "aac");
 			this.output.addAudioTrack(this.audioSource);
 		}
 
-		// Start the output to begin accepting media data
 		await this.output.start();
 	}
 
@@ -52,11 +69,7 @@ export class VideoMuxer {
 		if (!this.videoSource) {
 			throw new Error("Muxer not initialized");
 		}
-
-		// Convert WebCodecs chunk to Mediabunny packet
 		const packet = EncodedPacket.fromEncodedChunk(chunk);
-
-		// Add metadata with the first chunk
 		await this.videoSource.add(packet, meta);
 	}
 
@@ -64,11 +77,7 @@ export class VideoMuxer {
 		if (!this.audioSource) {
 			throw new Error("Audio not configured for this muxer");
 		}
-
-		// Convert WebCodecs chunk to Mediabunny packet
 		const packet = EncodedPacket.fromEncodedChunk(chunk);
-
-		// Add metadata with the first chunk
 		await this.audioSource.add(packet, meta);
 	}
 
@@ -84,6 +93,7 @@ export class VideoMuxer {
 			throw new Error("Failed to finalize output");
 		}
 
-		return new Blob([buffer], { type: "video/mp4" });
+		const mimeType = this.format === "webm" ? "video/webm" : "video/mp4";
+		return new Blob([buffer], { type: mimeType });
 	}
 }
