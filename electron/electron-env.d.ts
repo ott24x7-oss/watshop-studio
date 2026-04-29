@@ -164,6 +164,8 @@ interface Window {
 		annotationToggle: () => Promise<{ active: boolean }>;
 		annotationClose: () => Promise<{ ok: boolean }>;
 		annotationSetMousePassthrough: (passthrough: boolean) => Promise<{ ok: boolean }>;
+		hudSetContentProtection: (enabled: boolean) => Promise<{ ok: boolean }>;
+		hudSetCompact: (compact: boolean) => Promise<{ ok: boolean }>;
 	};
 }
 

@@ -119,6 +119,24 @@ export function LaunchWindow() {
 		}
 	};
 
+	const [compact, setCompact] = useState(false);
+	const toggleCompact = async () => {
+		const next = !compact;
+		setCompact(next);
+		try {
+			await window.electronAPI?.hudSetCompact?.(next);
+		} catch (err) {
+			console.error("[hud] compact toggle failed:", err);
+			setCompact(!next);
+		}
+	};
+
+	// While recording, hide the HUD from screen capture (Win 10 2004+ / macOS).
+	// Customer sees the bar; the recording does not.
+	useEffect(() => {
+		window.electronAPI?.hudSetContentProtection?.(recording).catch(() => {});
+	}, [recording]);
+
 	const showMicControls = microphoneEnabled && !recording;
 	const showWebcamControls = webcamEnabled && !recording;
 
@@ -492,24 +510,29 @@ export function LaunchWindow() {
 			<div
 				className={`fixed bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-2 py-1.5 rounded-full shadow-hud-bar bg-gradient-to-br from-[rgba(28,28,36,0.97)] to-[rgba(18,18,26,0.96)] backdrop-blur-[16px] backdrop-saturate-[140%] border border-[rgba(80,80,120,0.25)]`}
 			>
-				{/* Drag handle */}
-				<div className={`flex items-center px-1 ${styles.electronDrag}`}>
-					{getIcon("drag", "text-white/30")}
+				{/* Drag handle — drag from here to move the HUD anywhere */}
+				<div
+					className={`flex items-center px-1.5 py-1 rounded-full hover:bg-white/5 transition-colors ${styles.electronDrag}`}
+					title="Drag to move"
+				>
+					{getIcon("drag", "text-white/55 hover:text-white/85")}
 				</div>
 
 				{/* Source selector */}
-				<button
-					className={`${hudGroupClasses} p-2 ${styles.electronNoDrag}`}
-					onClick={openSourceSelector}
-					disabled={recording}
-					title={selectedSource}
-				>
-					{getIcon("monitor", "text-white/80")}
-					<span className="text-white/70 text-[11px] max-w-[72px] truncate">{selectedSource}</span>
-				</button>
+				{!compact && (
+					<button
+						className={`${hudGroupClasses} p-2 ${styles.electronNoDrag}`}
+						onClick={openSourceSelector}
+						disabled={recording}
+						title={selectedSource}
+					>
+						{getIcon("monitor", "text-white/80")}
+						<span className="text-white/70 text-[11px] max-w-[72px] truncate">{selectedSource}</span>
+					</button>
+				)}
 
 				{/* Audio controls group */}
-				<div className={`${hudGroupClasses} ${styles.electronNoDrag}`}>
+				<div className={`${hudGroupClasses} ${styles.electronNoDrag} ${compact ? "hidden" : ""}`}>
 					<button
 						className={`${hudIconBtnClasses} ${systemAudioEnabled ? "drop-shadow-[0_0_4px_rgba(74,222,128,0.4)]" : ""}`}
 						onClick={() => !recording && setSystemAudioEnabled(!systemAudioEnabled)}
@@ -547,7 +570,7 @@ export function LaunchWindow() {
 				</div>
 
 				{/* Annotate (markup overlay) button */}
-				<div className={`${hudGroupClasses} ${styles.electronNoDrag}`}>
+				<div className={`${hudGroupClasses} ${styles.electronNoDrag} ${compact ? "hidden" : ""}`}>
 					<button
 						className={`${hudIconBtnClasses} ${
 							annotationActive ? "drop-shadow-[0_0_4px_rgba(52,199,123,0.55)] bg-white/10" : ""
@@ -565,7 +588,7 @@ export function LaunchWindow() {
 				{/* Recording format selector — two inline pills, no popover (avoids
 				    clipping inside the small frameless HUD window) */}
 				<div
-					className={`${hudGroupClasses} p-0.5 ${styles.electronNoDrag}`}
+					className={`${hudGroupClasses} p-0.5 ${styles.electronNoDrag} ${compact ? "hidden" : ""}`}
 					title={
 						recording
 							? "Format locked while recording"
@@ -637,7 +660,7 @@ export function LaunchWindow() {
 					</div>
 				)}
 
-				{!recording && (
+				{!recording && !compact && (
 					<>
 						{/* Open video file */}
 						<Tooltip content={t("tooltips.openVideoFile")}>
@@ -662,7 +685,7 @@ export function LaunchWindow() {
 				)}
 
 				{/* Right sidebar controls */}
-				<div className={`${hudSidebarClasses} ${styles.electronNoDrag}`}>
+				<div className={`${hudSidebarClasses} ${styles.electronNoDrag} ${compact ? "hidden" : ""}`}>
 					<div className={`${styles.languageMenuContainer} ${styles.electronNoDrag}`}>
 						<button
 							ref={languageTriggerRef}
@@ -720,6 +743,19 @@ export function LaunchWindow() {
 
 					{/* Window controls */}
 					<div className="flex items-center gap-0.5">
+						<button
+							className={windowBtnClasses}
+							title={compact ? "Expand HUD" : "Compact HUD"}
+							onClick={toggleCompact}
+						>
+							<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" className="text-white">
+								{compact ? (
+									<path d="M3 3h4v1.5H4.5V7H3V3zm6 0h4v4h-1.5V4.5H9V3zM3 9h1.5v2.5H7V13H3V9zm8.5 0H13v4H9v-1.5h2.5V9z" />
+								) : (
+									<path d="M5 5h6v6H5V5z" />
+								)}
+							</svg>
+						</button>
 						<button
 							className={windowBtnClasses}
 							title={t("tooltips.hideHUD")}

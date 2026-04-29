@@ -1309,8 +1309,8 @@ export function SettingsPanel({
 					</button>
 				</div>
 
-				{exportFormat === "mp4" && (
-					<div className="mb-3 bg-white/5 border border-white/5 p-0.5 w-full grid grid-cols-3 h-7 rounded-lg">
+				{exportFormat !== "gif" && (
+					<div className="mb-3 bg-white/5 border border-white/5 p-0.5 w-full grid grid-cols-4 h-7 rounded-lg gap-0.5">
 						<button
 							onClick={() => onExportQualityChange?.("medium")}
 							className={cn(
@@ -1319,6 +1319,7 @@ export function SettingsPanel({
 									? "bg-white text-black"
 									: "text-slate-400 hover:text-slate-200",
 							)}
+							title="720p · ~10 Mbps"
 						>
 							{t("exportQuality.low")}
 						</button>
@@ -1330,6 +1331,7 @@ export function SettingsPanel({
 									? "bg-white text-black"
 									: "text-slate-400 hover:text-slate-200",
 							)}
+							title="1080p · ~20 Mbps"
 						>
 							{t("exportQuality.medium")}
 						</button>
@@ -1341,8 +1343,21 @@ export function SettingsPanel({
 									? "bg-white text-black"
 									: "text-slate-400 hover:text-slate-200",
 							)}
+							title="Source resolution · ~50 Mbps"
 						>
 							{t("exportQuality.high")}
+						</button>
+						<button
+							onClick={() => onExportQualityChange?.("4k")}
+							className={cn(
+								"rounded-md transition-all text-[10px] font-bold",
+								exportQuality === "4k"
+									? "bg-[#34C77B] text-black"
+									: "text-[#34C77B]/80 hover:text-[#34C77B]",
+							)}
+							title="3840×2160 · ~80 Mbps"
+						>
+							4K
 						</button>
 					</div>
 				)}

@@ -74,7 +74,8 @@ export function loadUserPreferences(): UserPreferences {
 		exportQuality:
 			raw.exportQuality === "medium" ||
 			raw.exportQuality === "good" ||
-			raw.exportQuality === "source"
+			raw.exportQuality === "source" ||
+			raw.exportQuality === "4k"
 				? (raw.exportQuality as ExportQuality)
 				: DEFAULT_PREFS.exportQuality,
 		exportFormat:

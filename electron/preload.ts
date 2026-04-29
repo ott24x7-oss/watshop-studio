@@ -78,6 +78,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
 	annotationClose: () => ipcRenderer.invoke("annotation:close"),
 	annotationSetMousePassthrough: (passthrough: boolean) =>
 		ipcRenderer.invoke("annotation:set-mouse-passthrough", passthrough),
+	hudSetContentProtection: (enabled: boolean) =>
+		ipcRenderer.invoke("hud:set-content-protection", enabled),
+	hudSetCompact: (compact: boolean) => ipcRenderer.invoke("hud:set-compact", compact),
 	saveExportedVideo: (videoData: ArrayBuffer, fileName: string) => {
 		return ipcRenderer.invoke("save-exported-video", videoData, fileName);
 	},

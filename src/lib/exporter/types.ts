@@ -32,7 +32,7 @@ export interface VideoFrameData {
 	duration: number; // in microseconds
 }
 
-export type ExportQuality = "medium" | "good" | "source";
+export type ExportQuality = "medium" | "good" | "source" | "4k";
 
 // Output container/codec choice for exports
 export type ExportFormat = "mp4" | "webm" | "gif";

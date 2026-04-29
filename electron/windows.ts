@@ -42,15 +42,13 @@ export function createHudOverlayWindow(): BrowserWindow {
 	const win = new BrowserWindow({
 		width: windowWidth,
 		height: windowHeight,
-		minWidth: 600,
-		maxWidth: 600,
-		minHeight: 160,
-		maxHeight: 160,
+		minWidth: 220,
+		minHeight: 60,
 		x: x,
 		y: y,
 		frame: false,
 		transparent: true,
-		resizable: false,
+		resizable: true,
 		alwaysOnTop: true,
 		// Show in taskbar so users can restore via the taskbar after minimising.
 		// (Tray icon still works too.)

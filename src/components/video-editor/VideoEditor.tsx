@@ -1481,20 +1481,23 @@ export default function VideoEditor() {
 						}
 					} else {
 						// Use quality-based target resolution
-						const targetHeight = quality === "medium" ? 720 : 1080;
+						const targetHeight =
+							quality === "medium" ? 720 : quality === "good" ? 1080 : quality === "4k" ? 2160 : 1080;
 
 						// Calculate dimensions maintaining aspect ratio
 						exportHeight = Math.floor(targetHeight / 2) * 2;
 						exportWidth = Math.floor((exportHeight * aspectRatioValue) / 2) * 2;
 
-						// Adjust bitrate for lower resolutions
+						// Adjust bitrate for resolution
 						const totalPixels = exportWidth * exportHeight;
 						if (totalPixels <= 1280 * 720) {
 							bitrate = 10_000_000;
 						} else if (totalPixels <= 1920 * 1080) {
 							bitrate = 20_000_000;
+						} else if (totalPixels <= 2560 * 1440) {
+							bitrate = 50_000_000;
 						} else {
-							bitrate = 30_000_000;
+							bitrate = 80_000_000;
 						}
 					}
 

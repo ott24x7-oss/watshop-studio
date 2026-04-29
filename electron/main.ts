@@ -522,6 +522,36 @@ ipcMain.handle("annotation:set-mouse-passthrough", (_, passthrough: boolean) => 
 	return { ok: true };
 });
 
+/**
+ * When `enabled` is true, the HUD window is excluded from screen capture
+ * (Win 10 2004+ and macOS). Customers see the bar normally but it does NOT
+ * appear in their recordings. Used while recording is active.
+ */
+ipcMain.handle("hud:set-content-protection", (_, enabled: boolean) => {
+	if (mainWindow && !mainWindow.isDestroyed()) {
+		mainWindow.setContentProtection(enabled);
+	}
+	return { ok: true };
+});
+
+/**
+ * Resize the HUD bar to a compact floating widget (or restore full size).
+ */
+ipcMain.handle("hud:set-compact", (_, compact: boolean) => {
+	if (!mainWindow || mainWindow.isDestroyed()) return { ok: false };
+	const display = mainWindow.getBounds();
+	if (compact) {
+		mainWindow.setMinimumSize(220, 60);
+		mainWindow.setMaximumSize(220, 60);
+		mainWindow.setBounds({ x: display.x + Math.max(0, (display.width - 220) / 2) | 0, y: display.y, width: 220, height: 60 });
+	} else {
+		mainWindow.setMinimumSize(600, 160);
+		mainWindow.setMaximumSize(600, 160);
+		mainWindow.setBounds({ x: display.x - Math.max(0, (600 - display.width) / 2) | 0, y: display.y, width: 600, height: 160 });
+	}
+	return { ok: true };
+});
+
 // Register all IPC handlers when app is ready
 app.whenReady().then(async () => {
 	// Allow microphone/media permission checks
