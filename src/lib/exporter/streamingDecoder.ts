@@ -50,42 +50,89 @@ function buildAV1CodecString(description?: BufferSource): string {
 }
 
 /**
- * web-demuxer / FFmpeg sometimes emit short, ambiguous codec names that
- * `VideoDecoder.configure()` rejects with "Unknown or ambiguous codec name".
- * WebCodecs requires fully-parametrized codec strings (RFC 6381). For codecs
- * where the parametrized form is mostly profile/level metadata that doesn't
- * change how decode works for typical screen recordings, we substitute a safe
- * default. The decoder also receives the codec-private-data via
- * `decoderConfig.description`, which carries the real per-stream parameters.
+ * Build an RFC 6381 H.264 codec string from the AVCDecoderConfigurationRecord
+ * (the avcC box from MP4 / Matroska CodecPrivate). Format is `avc1.PPCCLL`
+ * where PP/CC/LL are the profile, profile-compatibility, and level bytes
+ * encoded as 2-digit uppercase hex.
  *
- * Defaults chosen for compatibility with what Chromium's MediaRecorder writes:
- *   - VP9: Profile 0 (4:2:0 8-bit), Level 1.0
- *   - VP8: bare "vp8" is accepted as-is by Chromium
- *   - H.264: Baseline profile, Level 3.0 (very widely supported)
- *   - H.265: Main profile, Level 3.1, 8-bit
+ * @see ISO/IEC 14496-15 §5.2.4.1
+ */
+function buildAVCCodecString(description?: BufferSource): string {
+	const fallback = "avc1.42E01E"; // Baseline 3.0 — widely supported safe default.
+	if (!description) return fallback;
+
+	const bytes =
+		description instanceof ArrayBuffer
+			? new Uint8Array(description)
+			: new Uint8Array(description.buffer, description.byteOffset, description.byteLength);
+
+	// avcC box layout (first 4 bytes are all we need):
+	//   Byte 0: configurationVersion (must be 1)
+	//   Byte 1: AVCProfileIndication
+	//   Byte 2: profile_compatibility
+	//   Byte 3: AVCLevelIndication
+	if (bytes.length < 4) return fallback;
+	if (bytes[0] !== 1) return fallback;
+
+	const profile = bytes[1].toString(16).toUpperCase().padStart(2, "0");
+	const compat = bytes[2].toString(16).toUpperCase().padStart(2, "0");
+	const level = bytes[3].toString(16).toUpperCase().padStart(2, "0");
+	return `avc1.${profile}${compat}${level}`;
+}
+
+const VP09_RE = /^vp09(?:\.\d{2}){3,}/;
+const AVC1_RE = /^avc1\.[0-9a-f]{6}$/i;
+const HEV1_RE = /^h(?:e|v)c?1\./i;
+const AV01_RE = /^av01\.\d\.\d{2}[mh]\.\d{2}/i;
+
+/**
+ * web-demuxer / FFmpeg sometimes emit short or malformed codec names that
+ * `VideoDecoder.configure()` rejects with "Unknown or ambiguous codec name".
+ * WebCodecs requires fully-parametrized codec strings (RFC 6381). When the
+ * codec string we got is bare or malformed, we either rebuild from the
+ * codec-private-data in `description` (the source of truth) or substitute a
+ * safe default. The decoder still receives `description`, so the real
+ * per-stream parameters (SPS/PPS, color space, etc.) are honored at decode.
+ *
+ * Defaults chosen for compatibility with Chromium MediaRecorder output:
+ *   - VP9: Profile 0 (4:2:0 8-bit), Level 1.0   →  `vp09.00.10.08`
+ *   - VP8: Chromium accepts bare `vp8`
+ *   - H.264: Baseline profile, Level 3.0        →  `avc1.42E01E`
+ *   - H.265: Main 3.1, 8-bit                    →  `hev1.1.6.L93.B0`
  */
 function normalizeCodecString(codec: string, description?: BufferSource): string {
 	if (!codec) return codec;
 	const lower = codec.toLowerCase().trim();
 
-	if (lower === "av01" || lower === "av1") {
+	// AV1 — bare or malformed
+	if (lower === "av01" || lower === "av1") return buildAV1CodecString(description);
+	if (lower.startsWith("av01") && !AV01_RE.test(lower)) {
 		return buildAV1CodecString(description);
 	}
-	// VP9: bare "vp9" or "vp09" without RFC 6381 params
-	if (lower === "vp9" || lower === "vp09") {
+
+	// VP9
+	if (lower === "vp9" || lower === "vp09") return "vp09.00.10.08";
+	if (lower.startsWith("vp09") && !VP09_RE.test(lower)) {
 		return "vp09.00.10.08";
 	}
-	// VP8: Chromium accepts "vp8" by itself
-	if (lower === "vp8" || lower === "vp08") {
-		return "vp8";
-	}
-	// H.264 (AVC) without parameters
+
+	// VP8 — `vp8` is accepted as-is
+	if (lower === "vp8" || lower === "vp08") return "vp8";
+
+	// H.264 (AVC) — bare OR malformed parametrized form (e.g. "avc1.2420032")
 	if (lower === "h264" || lower === "avc" || lower === "avc1") {
-		return "avc1.42E01E"; // Baseline 3.0
+		return buildAVCCodecString(description);
 	}
-	// H.265 (HEVC) without parameters
+	if (lower.startsWith("avc1.") && !AVC1_RE.test(lower)) {
+		return buildAVCCodecString(description);
+	}
+
+	// H.265 (HEVC)
 	if (lower === "h265" || lower === "hevc" || lower === "hvc1" || lower === "hev1") {
-		return "hev1.1.6.L93.B0"; // Main 3.1 8-bit
+		return "hev1.1.6.L93.B0";
+	}
+	if (HEV1_RE.test(lower) && !/^hev1\.\d\.\d+\.l\d+\.b\d+/i.test(lower) && !/^hvc1\.\d\.\d+\.l\d+\.b\d+/i.test(lower)) {
+		return "hev1.1.6.L93.B0";
 	}
 
 	return codec;
