@@ -535,20 +535,24 @@ ipcMain.handle("hud:set-content-protection", (_, enabled: boolean) => {
 });
 
 /**
- * Resize the HUD bar to a compact floating widget (or restore full size).
+ * Resize the HUD bar to a compact recording widget (460x70) or restore full
+ * size (600x160). Centred on the previous window's centre so it doesn't jump.
  */
 ipcMain.handle("hud:set-compact", (_, compact: boolean) => {
 	if (!mainWindow || mainWindow.isDestroyed()) return { ok: false };
-	const display = mainWindow.getBounds();
-	if (compact) {
-		mainWindow.setMinimumSize(220, 60);
-		mainWindow.setMaximumSize(220, 60);
-		mainWindow.setBounds({ x: display.x + Math.max(0, (display.width - 220) / 2) | 0, y: display.y, width: 220, height: 60 });
-	} else {
-		mainWindow.setMinimumSize(600, 160);
-		mainWindow.setMaximumSize(600, 160);
-		mainWindow.setBounds({ x: display.x - Math.max(0, (600 - display.width) / 2) | 0, y: display.y, width: 600, height: 160 });
-	}
+	const cur = mainWindow.getBounds();
+	const newW = compact ? 460 : 600;
+	const newH = compact ? 70 : 160;
+	const cx = cur.x + cur.width / 2;
+	const cy = cur.y + cur.height / 2;
+	mainWindow.setMinimumSize(220, 60);
+	mainWindow.setMaximumSize(0, 0); // 0 means no max
+	mainWindow.setBounds({
+		x: Math.round(cx - newW / 2),
+		y: Math.round(cy - newH / 2),
+		width: newW,
+		height: newH,
+	});
 	return { ok: true };
 });
 

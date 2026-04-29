@@ -131,10 +131,23 @@ export function LaunchWindow() {
 		}
 	};
 
-	// While recording, hide the HUD from screen capture (Win 10 2004+ / macOS).
-	// Customer sees the bar; the recording does not.
+	// While recording, hide the HUD from screen capture (Win 10 2004+ / macOS),
+	// and auto-shrink the bar to a compact recording-only layout. Restoring on stop.
+	const wasRecordingRef = useRef(false);
 	useEffect(() => {
 		window.electronAPI?.hudSetContentProtection?.(recording).catch(() => {});
+
+		if (recording && !wasRecordingRef.current) {
+			// transitioned: idle -> recording
+			wasRecordingRef.current = true;
+			setCompact(true);
+			window.electronAPI?.hudSetCompact?.(true).catch(() => {});
+		} else if (!recording && wasRecordingRef.current) {
+			// transitioned: recording -> idle
+			wasRecordingRef.current = false;
+			setCompact(false);
+			window.electronAPI?.hudSetCompact?.(false).catch(() => {});
+		}
 	}, [recording]);
 
 	const showMicControls = microphoneEnabled && !recording;
@@ -531,8 +544,8 @@ export function LaunchWindow() {
 					</button>
 				)}
 
-				{/* Audio controls group */}
-				<div className={`${hudGroupClasses} ${styles.electronNoDrag} ${compact ? "hidden" : ""}`}>
+				{/* Audio + camera controls group — always visible (kept compact too) */}
+				<div className={`${hudGroupClasses} ${styles.electronNoDrag}`}>
 					<button
 						className={`${hudIconBtnClasses} ${systemAudioEnabled ? "drop-shadow-[0_0_4px_rgba(74,222,128,0.4)]" : ""}`}
 						onClick={() => !recording && setSystemAudioEnabled(!systemAudioEnabled)}
@@ -569,8 +582,8 @@ export function LaunchWindow() {
 					</button>
 				</div>
 
-				{/* Annotate (markup overlay) button */}
-				<div className={`${hudGroupClasses} ${styles.electronNoDrag} ${compact ? "hidden" : ""}`}>
+				{/* Annotate (markup overlay) button — kept visible during recording too */}
+				<div className={`${hudGroupClasses} ${styles.electronNoDrag}`}>
 					<button
 						className={`${hudIconBtnClasses} ${
 							annotationActive ? "drop-shadow-[0_0_4px_rgba(52,199,123,0.55)] bg-white/10" : ""
