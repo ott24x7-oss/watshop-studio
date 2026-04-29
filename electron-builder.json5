@@ -63,11 +63,12 @@
       "nsis"
     ],
     "icon": "icons/icons/win/icon.ico",
-    "publisherName": "WatShop"
+    "legalTrademarks": "WatShop"
   },
   "nsis": {
     "oneClick": false,
     "allowToChangeInstallationDirectory": true,
-    "publisher": "WatShop"
+    "uninstallDisplayName": "WatShop Studio",
+    "shortcutName": "WatShop Studio"
   }
 }
