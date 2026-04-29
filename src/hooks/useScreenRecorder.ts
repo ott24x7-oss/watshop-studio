@@ -3,6 +3,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useScopedT } from "@/contexts/I18nContext";
 import { requestCameraAccess } from "@/lib/requestCameraAccess";
+import {
+	loadUserPreferences,
+	type RecordingFormat,
+	saveUserPreferences,
+} from "@/lib/userPreferences";
 
 const TARGET_FRAME_RATE = 60;
 const MIN_FRAME_RATE = 30;
@@ -57,6 +62,8 @@ type UseScreenRecorderReturn = {
 	setSystemAudioEnabled: (enabled: boolean) => void;
 	webcamEnabled: boolean;
 	setWebcamEnabled: (enabled: boolean) => Promise<boolean>;
+	recordingFormat: RecordingFormat;
+	setRecordingFormat: (format: RecordingFormat) => void;
 };
 
 type RecorderHandle = {
@@ -96,6 +103,13 @@ export function useScreenRecorder(): UseScreenRecorderReturn {
 	const [webcamDeviceId, setWebcamDeviceId] = useState<string | undefined>(undefined);
 	const [systemAudioEnabled, setSystemAudioEnabled] = useState(false);
 	const [webcamEnabled, setWebcamEnabledState] = useState(false);
+	const [recordingFormat, setRecordingFormatState] = useState<RecordingFormat>(
+		() => loadUserPreferences().recordingFormat,
+	);
+	const setRecordingFormat = useCallback((format: RecordingFormat) => {
+		setRecordingFormatState(format);
+		saveUserPreferences({ recordingFormat: format });
+	}, []);
 	const screenRecorder = useRef<RecorderHandle | null>(null);
 	const webcamRecorder = useRef<RecorderHandle | null>(null);
 	const stream = useRef<MediaStream | null>(null);
@@ -121,19 +135,31 @@ export function useScreenRecorder(): UseScreenRecorderReturn {
 		return accumulatedDurationMs.current + segmentDuration;
 	}, []);
 
-	const selectMimeType = () => {
+	const selectMimeType = (format: "webm" | "mp4" = "webm") => {
 		// H.264 first: hardware-accelerated on all modern devices, gives sharp
 		// real-time output. AV1/VP9 are great for distribution but too
 		// CPU-intensive for live 60 fps capture — they produce blurry frames
 		// when the software encoder can't keep up.
-		const preferred = [
+		const webmCandidates = [
+			"video/webm;codecs=h264,opus",
 			"video/webm;codecs=h264",
+			"video/webm;codecs=vp8,opus",
 			"video/webm;codecs=vp8",
+			"video/webm;codecs=vp9,opus",
 			"video/webm;codecs=vp9",
+			"video/webm;codecs=av1,opus",
 			"video/webm;codecs=av1",
 			"video/webm",
 		];
+		const mp4Candidates = [
+			"video/mp4;codecs=h264,aac",
+			"video/mp4;codecs=h264,mp4a.40.2",
+			"video/mp4;codecs=avc1,mp4a.40.2",
+			"video/mp4;codecs=avc1",
+			"video/mp4",
+		];
 
+		const preferred = format === "mp4" ? [...mp4Candidates, ...webmCandidates] : webmCandidates;
 		return preferred.find((type) => MediaRecorder.isTypeSupported(type)) ?? "video/webm";
 	};
 
@@ -729,7 +755,7 @@ export function useScreenRecorder(): UseScreenRecorderReturn {
 			height = Math.floor(height / CODEC_ALIGNMENT) * CODEC_ALIGNMENT;
 
 			const videoBitsPerSecond = computeBitrate(width, height);
-			const mimeType = selectMimeType();
+			const mimeType = selectMimeType(recordingFormat);
 
 			console.log(
 				`Recording at ${width}x${height} @ ${frameRate ?? TARGET_FRAME_RATE}fps using ${mimeType} / ${Math.round(
@@ -964,5 +990,7 @@ export function useScreenRecorder(): UseScreenRecorderReturn {
 		setSystemAudioEnabled,
 		webcamEnabled,
 		setWebcamEnabled,
+		recordingFormat,
+		setRecordingFormat,
 	};
 }

@@ -106,7 +106,19 @@ export function LaunchWindow() {
 		setWebcamEnabled,
 		webcamDeviceId,
 		setWebcamDeviceId,
+		recordingFormat,
+		setRecordingFormat,
 	} = useScreenRecorder();
+	const [isFormatMenuOpen, setIsFormatMenuOpen] = useState(false);
+	const formatMenuRef = useRef<HTMLDivElement | null>(null);
+	useEffect(() => {
+		if (!isFormatMenuOpen) return;
+		const onDocClick = (e: MouseEvent) => {
+			if (!formatMenuRef.current?.contains(e.target as Node)) setIsFormatMenuOpen(false);
+		};
+		document.addEventListener("mousedown", onDocClick);
+		return () => document.removeEventListener("mousedown", onDocClick);
+	}, [isFormatMenuOpen]);
 
 	const showMicControls = microphoneEnabled && !recording;
 	const showWebcamControls = webcamEnabled && !recording;
@@ -533,6 +545,52 @@ export function LaunchWindow() {
 							? getIcon("webcamOn", "text-green-400")
 							: getIcon("webcamOff", "text-white/40")}
 					</button>
+				</div>
+
+				{/* Recording format selector */}
+				<div
+					ref={formatMenuRef}
+					className={`${hudGroupClasses} ${styles.electronNoDrag} relative`}
+				>
+					<button
+						className={`flex items-center gap-1.5 px-3 py-2 rounded-full text-[11px] font-mono font-semibold uppercase tracking-wider transition-colors ${
+							recording
+								? "text-white/40 cursor-not-allowed"
+								: "text-white/80 hover:bg-white/10 cursor-pointer"
+						}`}
+						onClick={() => !recording && setIsFormatMenuOpen((v) => !v)}
+						disabled={recording}
+						title="Recording format"
+					>
+						{recordingFormat === "mp4" ? "MP4" : "WebM"}
+						<ChevronDown size={12} className={isFormatMenuOpen ? "rotate-180" : ""} />
+					</button>
+					{isFormatMenuOpen && !recording && (
+						<div className="absolute top-full mt-1.5 right-0 bg-zinc-900/95 backdrop-blur-xl border border-white/10 rounded-lg overflow-hidden shadow-xl z-50 min-w-[140px]">
+							{(["webm", "mp4"] as const).map((fmt) => (
+								<button
+									key={fmt}
+									className={`w-full flex items-center justify-between gap-3 px-3 py-2 text-xs font-mono font-semibold uppercase tracking-wider transition-colors ${
+										recordingFormat === fmt
+											? "text-[#34C77B] bg-white/[0.04]"
+											: "text-white/75 hover:bg-white/[0.06]"
+									}`}
+									onClick={() => {
+										setRecordingFormat(fmt);
+										setIsFormatMenuOpen(false);
+									}}
+								>
+									<span>{fmt === "mp4" ? "MP4" : "WebM"}</span>
+									{recordingFormat === fmt && <Check size={12} />}
+								</button>
+							))}
+							<div className="border-t border-white/5 px-3 py-1.5 text-[10px] text-white/35 leading-snug normal-case">
+								{recordingFormat === "mp4"
+									? "H.264 in MP4 — universal compatibility"
+									: "VP9/H.264 in WebM — smaller files"}
+							</div>
+						</div>
+					)}
 				</div>
 
 				{/* Record/Stop group */}

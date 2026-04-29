@@ -3,6 +3,8 @@ import type { AspectRatio } from "@/utils/aspectRatioUtils";
 
 const PREFS_KEY = "openscreen_user_preferences";
 
+export type RecordingFormat = "webm" | "mp4";
+
 const VALID_ASPECT_RATIOS: readonly string[] = [
 	"16:9",
 	"9:16",
@@ -23,6 +25,8 @@ export interface UserPreferences {
 	exportQuality: ExportQuality;
 	/** Default export format */
 	exportFormat: ExportFormat;
+	/** Container/codec format used while recording (webm = vp9/h264 in webm; mp4 = h264/aac in mp4) */
+	recordingFormat: RecordingFormat;
 }
 
 const DEFAULT_PREFS: UserPreferences = {
@@ -30,6 +34,7 @@ const DEFAULT_PREFS: UserPreferences = {
 	aspectRatio: "16:9",
 	exportQuality: "good",
 	exportFormat: "mp4",
+	recordingFormat: "webm",
 };
 
 function safeJsonParse(text: string | null): Record<string, unknown> | null {
@@ -76,6 +81,10 @@ export function loadUserPreferences(): UserPreferences {
 			raw.exportFormat === "gif" || raw.exportFormat === "mp4"
 				? (raw.exportFormat as ExportFormat)
 				: DEFAULT_PREFS.exportFormat,
+		recordingFormat:
+			raw.recordingFormat === "webm" || raw.recordingFormat === "mp4"
+				? (raw.recordingFormat as RecordingFormat)
+				: DEFAULT_PREFS.recordingFormat,
 	};
 }
 
