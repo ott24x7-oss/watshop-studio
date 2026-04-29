@@ -161,6 +161,9 @@ interface Window {
 		licenseOpenBuyPage: () => Promise<{ ok: boolean }>;
 		licenseDeactivate: () => Promise<{ ok: boolean }>;
 		onLicenseRefreshed: (callback: () => void) => () => void;
+		annotationToggle: () => Promise<{ active: boolean }>;
+		annotationClose: () => Promise<{ ok: boolean }>;
+		annotationSetMousePassthrough: (passthrough: boolean) => Promise<{ ok: boolean }>;
 	};
 }
 

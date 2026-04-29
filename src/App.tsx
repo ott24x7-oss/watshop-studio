@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { AnnotationOverlay } from "./components/annotation/AnnotationOverlay";
 import { CountdownOverlay } from "./components/launch/CountdownOverlay.tsx";
 import { LaunchWindow } from "./components/launch/LaunchWindow";
 import { SourceSelector } from "./components/launch/SourceSelector";
@@ -22,7 +23,12 @@ export default function App() {
 			setWindowType(type);
 		}
 
-		if (type === "hud-overlay" || type === "source-selector" || type === "countdown-overlay") {
+		if (
+			type === "hud-overlay" ||
+			type === "source-selector" ||
+			type === "countdown-overlay" ||
+			type === "annotation-overlay"
+		) {
 			document.body.style.background = "transparent";
 			document.documentElement.style.background = "transparent";
 			document.getElementById("root")?.style.setProperty("background", "transparent");
@@ -54,6 +60,8 @@ export default function App() {
 		switch (windowType) {
 			case "license":
 				return <LicenseGate />;
+			case "annotation-overlay":
+				return <AnnotationOverlay />;
 			case "hud-overlay":
 				return <LaunchWindow />;
 			case "source-selector":

@@ -74,6 +74,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
 		ipcRenderer.on("license-refreshed", listener);
 		return () => ipcRenderer.removeListener("license-refreshed", listener);
 	},
+	annotationToggle: () => ipcRenderer.invoke("annotation:toggle"),
+	annotationClose: () => ipcRenderer.invoke("annotation:close"),
+	annotationSetMousePassthrough: (passthrough: boolean) =>
+		ipcRenderer.invoke("annotation:set-mouse-passthrough", passthrough),
 	saveExportedVideo: (videoData: ArrayBuffer, fileName: string) => {
 		return ipcRenderer.invoke("save-exported-video", videoData, fileName);
 	},

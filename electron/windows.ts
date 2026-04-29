@@ -96,6 +96,62 @@ export function createHudOverlayWindow(): BrowserWindow {
 }
 
 /**
+ * Creates a transparent, click-through, full-screen overlay used for marking
+ * up the screen during a recording. The window covers the entire primary
+ * display, sits on top of everything (alwaysOnTop screen-saver level), and
+ * starts in mouse-pass-through mode — the renderer toggles
+ * setIgnoreMouseEvents on/off as the user hovers the toolbar or draws.
+ */
+export function createAnnotationOverlayWindow(): BrowserWindow {
+	const primaryDisplay = screen.getPrimaryDisplay();
+	const { bounds } = primaryDisplay;
+
+	const win = new BrowserWindow({
+		width: bounds.width,
+		height: bounds.height,
+		x: bounds.x,
+		y: bounds.y,
+		frame: false,
+		transparent: true,
+		resizable: false,
+		movable: false,
+		minimizable: false,
+		maximizable: false,
+		alwaysOnTop: true,
+		skipTaskbar: true,
+		hasShadow: false,
+		fullscreenable: false,
+		focusable: false,
+		show: !HEADLESS,
+		webPreferences: {
+			preload: path.join(__dirname, "preload.mjs"),
+			additionalArguments: [ASSET_BASE_URL_ARG],
+			nodeIntegration: false,
+			contextIsolation: true,
+			backgroundThrottling: false,
+		},
+	});
+
+	// Sit above normal "alwaysOnTop" windows (HUD bar) so the toolbar is reachable.
+	win.setAlwaysOnTop(true, "screen-saver");
+	if (process.platform === "darwin") {
+		win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+	}
+	// Start in click-through mode — renderer flips this when the cursor enters
+	// the toolbar or a drawing tool is active.
+	win.setIgnoreMouseEvents(true, { forward: true });
+
+	if (VITE_DEV_SERVER_URL) {
+		win.loadURL(`${VITE_DEV_SERVER_URL}?windowType=annotation-overlay`);
+	} else {
+		win.loadFile(path.join(RENDERER_DIST, "index.html"), {
+			query: { windowType: "annotation-overlay" },
+		});
+	}
+	return win;
+}
+
+/**
  * Creates the license-gate window shown on first launch (and after a revocation).
  * Centered, fixed-size, no menu, dark background to match the brand.
  */

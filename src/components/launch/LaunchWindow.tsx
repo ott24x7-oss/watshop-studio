@@ -1,4 +1,4 @@
-import { Check, ChevronDown, Languages } from "lucide-react";
+import { Check, ChevronDown, Languages, Pencil } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { BsPauseCircle, BsPlayCircle, BsRecordCircle } from "react-icons/bs";
@@ -109,6 +109,15 @@ export function LaunchWindow() {
 		recordingFormat,
 		setRecordingFormat,
 	} = useScreenRecorder();
+	const [annotationActive, setAnnotationActive] = useState(false);
+	const toggleAnnotation = async () => {
+		try {
+			const res = await window.electronAPI?.annotationToggle?.();
+			if (res) setAnnotationActive(res.active);
+		} catch (err) {
+			console.error("[annotation] toggle failed:", err);
+		}
+	};
 
 	const showMicControls = microphoneEnabled && !recording;
 	const showWebcamControls = webcamEnabled && !recording;
@@ -534,6 +543,22 @@ export function LaunchWindow() {
 						{webcamEnabled
 							? getIcon("webcamOn", "text-green-400")
 							: getIcon("webcamOff", "text-white/40")}
+					</button>
+				</div>
+
+				{/* Annotate (markup overlay) button */}
+				<div className={`${hudGroupClasses} ${styles.electronNoDrag}`}>
+					<button
+						className={`${hudIconBtnClasses} ${
+							annotationActive ? "drop-shadow-[0_0_4px_rgba(52,199,123,0.55)] bg-white/10" : ""
+						}`}
+						onClick={toggleAnnotation}
+						title={annotationActive ? "Hide markup tools" : "Annotate the screen"}
+					>
+						<Pencil
+							size={ICON_SIZE}
+							className={annotationActive ? "text-[#5DE89B]" : "text-white/80"}
+						/>
 					</button>
 				</div>
 

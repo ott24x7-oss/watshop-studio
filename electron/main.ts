@@ -26,6 +26,7 @@ import {
 	maybeHeartbeat,
 } from "./license-manager";
 import {
+	createAnnotationOverlayWindow,
 	createCountdownOverlayWindow,
 	createEditorWindow,
 	createHudOverlayWindow,
@@ -79,6 +80,7 @@ let mainWindow: BrowserWindow | null = null;
 let licenseWindow: BrowserWindow | null = null;
 let sourceSelectorWindow: BrowserWindow | null = null;
 let countdownOverlayWindow: BrowserWindow | null = null;
+let annotationOverlayWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let selectedSourceName = "";
 const isMac = process.platform === "darwin";
@@ -487,6 +489,36 @@ ipcMain.handle("license:deactivate", async () => {
 	}
 	mainWindow = null;
 	showLicenseWindow();
+	return { ok: true };
+});
+
+ipcMain.handle("annotation:toggle", () => {
+	if (annotationOverlayWindow && !annotationOverlayWindow.isDestroyed()) {
+		const w = annotationOverlayWindow;
+		annotationOverlayWindow = null;
+		w.close();
+		return { active: false };
+	}
+	annotationOverlayWindow = createAnnotationOverlayWindow();
+	annotationOverlayWindow.on("closed", () => {
+		annotationOverlayWindow = null;
+	});
+	return { active: true };
+});
+
+ipcMain.handle("annotation:close", () => {
+	if (annotationOverlayWindow && !annotationOverlayWindow.isDestroyed()) {
+		const w = annotationOverlayWindow;
+		annotationOverlayWindow = null;
+		w.close();
+	}
+	return { ok: true };
+});
+
+ipcMain.handle("annotation:set-mouse-passthrough", (_, passthrough: boolean) => {
+	if (annotationOverlayWindow && !annotationOverlayWindow.isDestroyed()) {
+		annotationOverlayWindow.setIgnoreMouseEvents(passthrough, { forward: true });
+	}
 	return { ok: true };
 });
 
